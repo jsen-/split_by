@@ -6,8 +6,8 @@ authors = ["jsen- <max.enhanced@gmail.com>"]
 documentation = "https://docs.rs/split_by"
 repository = "https://github.com/jsen-/split_by"
 readme = "README.md"
-keywords = ["iterator", "split", "split by", "multiple", "sequence"]
-license = "MIT/Apache 2.0"
+keywords = ["iterator", "split", "multiple", "sequence"]
+license = "MIT/Apache-2.0"
 
 [dependencies]
 aho-corasick = "0.5"
