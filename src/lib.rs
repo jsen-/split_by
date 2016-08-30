@@ -30,7 +30,7 @@ pub struct SplitByIter<'a, R, A: Automaton<&'a [u8]> + 'a > {
 
 impl<'a, R: Read, A: Automaton<&'a [u8]> > SplitByIter<'a, R, A> {
 
-    fn _next(&mut self) -> Option<Vec<u8>> {
+    fn _next(&mut self) -> Option<IoResult<Vec<u8> > > {
         // TODO: find out why moving the line below here from both branches causes a panic
         // let mut g = self.g.borrow_mut();
         match self.matches.next() {
@@ -41,37 +41,46 @@ impl<'a, R: Read, A: Automaton<&'a [u8]> > SplitByIter<'a, R, A> {
                 if rest.len() == 0 {
                     None
                 } else {
-                    Some(rest)
+                    Some(Ok(rest))
                 }
             },
             Some(m) => {
                 let mut g = self.g.borrow_mut();
-                let m = m.unwrap();
-                let pos = self.pos;
-                let found: Vec<u8> = {
-                    let i = g.iter().map(|&v| v);
-                    i.take(m.start - pos).collect()
-                };
+                match m {
+                    Ok(m) => { 
+                        let pos = self.pos;
+                        let found: Vec<u8> = {
+                            let i = g.iter().map(|&v| v);
+                            i.take(m.start - pos).collect()
+                        };
 
-                let len = m.end - pos;
-                self.pos += len;
+                        let len = m.end - pos;
+                        self.pos += len;
 
-                g.drain(len);
-                Some(found)
+                        g.drain(len);
+                        Some(Ok(found))
+                    },
+                    Err(err) => Some(Err(err))
+                }
             } 
         }
     }
 }
 
 impl<'a, R: Read, A: Automaton<&'a [u8]> > Iterator for SplitByIter<'a, R, A> {
-    type Item = Vec<u8>;
+    type Item = IoResult<Vec<u8>>;
     
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             match self._next() {
                 None => return None,
-                Some(v) => if v.len() != 0 {
-                    return Some(v)
+                Some(v) => {
+                    match v {
+                        Ok(v) => if v.len() != 0 {
+                            return Some(Ok(v))
+                        },
+                        Err(err) => return Some(Err(err))
+                    }
                 }
             }
         }
@@ -97,11 +106,11 @@ impl<'a, R: Read, A: Automaton<&'a [u8]> > Iterator for SplitByIter<'a, R, A> {
 /// ################
 /// last"#.split_by(&ac);
 ///
-/// assert!(splits.next() == Some("first\n".bytes().collect()));
-/// assert!(splits.next() == Some("\nsecond\n".bytes().collect()));
-/// assert!(splits.next() == Some("\nthird\n".bytes().collect()));
-/// assert!(splits.next() == Some("\nlast".bytes().collect()));
-/// assert!(splits.next() == None);
+/// assert!(splits.next().unwrap().unwrap().as_slice() == b"first\n");
+/// assert!(splits.next().unwrap().unwrap().as_slice() == b"\nsecond\n");
+/// assert!(splits.next().unwrap().unwrap().as_slice() == b"\nthird\n");
+/// assert!(splits.next().unwrap().unwrap().as_slice() == b"\nlast");
+/// assert!(splits.next().is_none());
 /// # }
 /// ```
 ///
@@ -131,37 +140,30 @@ mod tests {
 
     #[test]
     fn leading() {
-        let ac = AcAutomaton::new(vec!["==".as_bytes()]);
-        assert!("==1==2==3==4==5==6==7==8".as_bytes().split_by(&ac).map(|f| f[0]).collect::<Vec<u8>>() == vec![b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8']);
+        assert!("==1==2==3==4==5==6==7==8".as_bytes().split_by(&AcAutomaton::new(vec!["==".as_bytes()])).map(|f| f.unwrap()[0]).collect::<Vec<u8>>() == vec![b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8']);
     }
     #[test]
     fn trailing() {
-        let ac = AcAutomaton::new(vec!["==".as_bytes()]);
-        assert!("1==2==3==4==5==6==7==8==".as_bytes().split_by(&ac).map(|f| f[0]).collect::<Vec<u8>>() == vec![b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8']);
+        assert!("1==2==3==4==5==6==7==8==".as_bytes().split_by(&AcAutomaton::new(vec!["==".as_bytes()])).map(|f| f.unwrap()[0]).collect::<Vec<u8>>() == vec![b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8']);
     }
     #[test]
     fn both() {
-        let ac = AcAutomaton::new(vec!["==".as_bytes()]);
-        assert!("1==2==3==4==5==6==7==8".as_bytes().split_by(&ac).map(|f| f[0]).collect::<Vec<u8>>() == vec![b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8']);
+        assert!("1==2==3==4==5==6==7==8".as_bytes().split_by(&AcAutomaton::new(vec!["==".as_bytes()])).map(|f| f.unwrap()[0]).collect::<Vec<u8>>() == vec![b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8']);
     }
     #[test]
     fn consecutive() {
-        let ac = AcAutomaton::new(vec!["==".as_bytes()]);
-        assert!("1====2==3==4==5==6==7==8".as_bytes().split_by(&ac).map(|f| f[0]).collect::<Vec<u8>>() == vec![b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8']);
+        assert!("1====2==3==4==5==6==7==8".as_bytes().split_by(&AcAutomaton::new(vec!["==".as_bytes()])).map(|f| f.unwrap()[0]).collect::<Vec<u8>>() == vec![b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8']);
     }
     #[test]
     fn empty() {
-        let ac = AcAutomaton::new(vec!["==".as_bytes()]);
-        assert!("".as_bytes().split_by(&ac).map(|f| f[0]).collect::<Vec<u8>>() == vec![]);
+        assert!("".as_bytes().split_by(&AcAutomaton::new(vec!["==".as_bytes()])).map(|f| f.unwrap()[0]).collect::<Vec<u8>>() == vec![]);
     }
     #[test]
     fn plain() {
-        let ac = AcAutomaton::new(vec!["==".as_bytes()]);
-        assert!("==".as_bytes().split_by(&ac).map(|f| f[0]).collect::<Vec<u8>>() == vec![]);
+        assert!("==".as_bytes().split_by(&AcAutomaton::new(vec!["==".as_bytes()])).map(|f| f.unwrap()[0]).collect::<Vec<u8>>() == vec![]);
     }
     #[test]
     fn not_present() {
-        let ac = AcAutomaton::new(vec!["==".as_bytes()]);
-        assert!("12345678".as_bytes().split_by(&ac).map(|f| f[0]).collect::<Vec<u8>>() == vec!["12345678".as_bytes()].iter().map(|f|f[0]).collect::<Vec<u8>>());
+        assert!("12345678".as_bytes().split_by(&AcAutomaton::new(vec!["==".as_bytes()])).map(|f| f.unwrap()[0]).collect::<Vec<u8>>() == vec!["12345678".as_bytes()].iter().map(|f|f[0]).collect::<Vec<u8>>());
     }
 }

@@ -20,9 +20,9 @@ use split_by::{AcAutomaton, SplitBy}
 use std::fs::File;
 
 fn main() {
-    let ac = AcAutomaton::new(vec!["<some pattern>"]); 
-    for section in File::open("path/to/file").unwrap().split_by(&ac) {
-        // do something with the bytes found bytes between patterns
+    for section in File::open("path/to/file").unwrap().split_by(&AcAutomaton::new(vec!["<some pattern>"])) {
+        let bytes = section.expect("read error occurred");
+        // do something with the bytes found between patterns
     }
 }
 ```
