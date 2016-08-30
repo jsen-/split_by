@@ -10,7 +10,7 @@ Split anything implementing Read trait by multiple sequences of bytes
 Add this to Cargo.toml, under `[dependencies]`:
 
 ```toml
-split_by = "0.1"
+split_by = "0.2"
 ```
 
 ## Usage
