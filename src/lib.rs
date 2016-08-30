@@ -86,16 +86,22 @@ impl<'a, R: Read, A: Automaton<&'a [u8]> > Iterator for SplitByIter<'a, R, A> {
 /// extern crate split_by;
 /// 
 /// use split_by::{SplitBy, AcAutomaton};
-/// use std::fs::File;
 /// 
 /// # fn main() {
 /// let ac = AcAutomaton::new(vec!["--------".as_bytes(), "********".as_bytes(), "########".as_bytes()]);
+/// let mut splits = br#"first
+/// --------
+/// second
+/// ********########
+/// third
+/// ################
+/// last"#.split_by(&ac);
 ///
-/// for split in File::open("path/to/file").unwrap().split_by(&ac) {
-///     assert!(split != "--------".as_bytes());
-///     assert!(split != "********".as_bytes());
-///     assert!(split != "########".as_bytes());
-/// }
+/// assert!(splits.next() == Some("first\n".bytes().collect()));
+/// assert!(splits.next() == Some("\nsecond\n".bytes().collect()));
+/// assert!(splits.next() == Some("\nthird\n".bytes().collect()));
+/// assert!(splits.next() == Some("\nlast".bytes().collect()));
+/// assert!(splits.next() == None);
 /// # }
 /// ```
 ///
@@ -117,6 +123,7 @@ impl<'a, R: Read> SplitBy<'a, R> for R {
         }
     }
 }
+
 
 #[cfg(test)]
 mod tests {
