@@ -1,7 +1,7 @@
 [package]
 name = "split_by"
 description = "Split anything implementing Read trait by multiple sequences of bytes"
-version = "0.2.1"
+version = "0.2.2"
 authors = ["jsen- <max.enhanced@gmail.com>"]
 documentation = "https://docs.rs/split_by"
 repository = "https://github.com/jsen-/split_by"
@@ -10,4 +10,4 @@ keywords = ["iterator", "split", "multiple", "sequence"]
 license = "MIT/Apache-2.0"
 
 [dependencies]
-aho-corasick = "0.5"
+aho-corasick = "0.6"
